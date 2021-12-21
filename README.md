@@ -7,7 +7,7 @@
 
 # Dependencies
 
-only PyPDF2 by running the following command `pip install PyPDF2` before
+only PyPDF2 by running the following command `pip install PyPDF2` before running the script or the script will install PyPDF2 by itself 
 
   
 
