@@ -1,8 +1,28 @@
 # coding: utf-8
-import PyPDF2
+try:
+    import PyPDF2
+    pass
+except:
+    print("the script need PyPDF2 , script will try to install it by itself for you")
+    try:
+        import sys
+        import subprocess
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "PyPDF2"])
+        import PyPDF2
+        print("PyPDF2 installed successfully")
+        del subprocess
+        del sys
+        pass
+    except:
+            print("PyPDF2 isn't installed and installing faild try to make sure that you pc connected to internet then run pip install PyPDF2")
+            exit(404)
+            pass
+        
+
+import os
 import re
 import argparse
-import os
+
 
 # the following pattern is an accurate pattern but works only with full compatible terminales with utf8
 sws_req_pattern_4_utf8=r"\[(?P<req_code>(?P<req_module>[A-Z]+)(?P<req_num>\d+))\] [\⌈]?(?P<req_discription>[^\⌋]*)[\⌋]? \(([^\)]*)\)"
@@ -12,7 +32,7 @@ sws_req_pattern=r"\[(?P<req_code>(?P<req_module>[A-Z]+)(?P<req_num>\d+))\] (?P<r
 #sws_req_pattern_lite=r"\[(?P<req_code>(?P<req_module>[A-Z]+)(?P<req_num>\d+))\] (?P<req_discription>[^\(]*) \(([^\)]*)\)"
 
 # this support only c comment /**/ as // not allowed by misra rules
-default_comment_pattern=r"\/\*\[(?P<req_code>[A-Z]+[\d]+)\][^\*]*[^\/]*\*\/"
+default_comment_pattern=r"\/\*[^\]]*\[(?P<req_code>[A-Z]+[\d]+)\][^\*]*[^\/]*\*\/"
 
 # for future using
 used_comment_pattern=r''
@@ -23,18 +43,9 @@ regex_comment_module_pattern=r"(?P<module_name>[\w]+)\.py"
 
 
 parser = argparse.ArgumentParser(
-    description=
-    """
-    this script helps you to catch autosar requirments you forgot to implement 
-    by give the sws_modul.pdf , project path and comment_pattern.txt as args to script 
-    note!! 
-    1- that comment_pattern.txt should be just two line ,first for starting tag and second for ending tag like
-    /*[
-    ]*/
-
-    2- you can use default pattern by not pass and it like following
-    /*[DIO096] and you comment*/
-    """)
+                                    description="this script helps you to catch autosar requirments you forgot to implement by give the sws_modul.pdf ",
+                                    usage="by passing the sws_modul.pdf path , project path and comment_pattern.txt if it used as args to script like the following (any flag like -s not surrounded by[] is required)\npython reqMatcher.py [-h] -s SWSPDF_PATH -d PROJECT_PATH [-p COMMENT_PATTERN][-r REGEX_PATTERN]\n\nnote!!\n\n1- that comment_pattern.txt should be just two line ,first for starting tag and second for ending tag like\n/*[\n]*/\n\n2- you can use default pattern by not pass and it like following\n/*[DIO096] and you comment*/ \n\n "
+                                )
 
 parser.add_argument('-s','--swspdf_path',required=True,help='the path of autosar_sws_module.pdf',type=str)
 parser.add_argument('-d','--project_path',required=True,help='the path of project directory path',type=str)
@@ -64,30 +75,31 @@ if(not(os.path.isdir(args.project_path))):
     print("%s isn't a directory or invalid path"%(args.project_path))
     exit()
     pass
-try:
-    if( args.regex_pattern ^ args.comment_pattern ):
-        if(args.regex_pattern):
-            match=re.search(regex_comment_module_pattern,args.regex_pattern)
-            module_dir_path=args.regex_pattern.replace(match["module_name"],'') 
-            import sys
-            exec("sys.path.append(%s)"%(module_dir_path))
-            exec('from %s import pattern'%match["module_name"])
-            exec('sws_req_pattern=pattern')
+
+if( bool(args.regex_pattern) ^ bool(args.comment_pattern) ):
+    if(args.regex_pattern):
+        match=re.search(regex_comment_module_pattern,args.regex_pattern)
+        module_dir_path=args.regex_pattern.replace(match["module_name"],'') 
+        exec("sys.path.append(%s)"%(module_dir_path))
+        exec('from %s import pattern'%match["module_name"])
+        exec('sws_req_pattern=pattern')
         pass
 
-        if(args.comment_pattern):
-            #with open(args.comment_pattern,'r') as f:
-            print("not supported yet")
-            exit()
-            pass
-    elif(args.regex_pattern):
-        print("just regex pattern or comment pattern only")
+    if(bool(args.comment_pattern)):
+        #with open(args.comment_pattern,'r') as f:
+        print("not supported yet")
         exit()
         pass
-except :
-    #default case so do nothing
-    used_comment_pattern=default_comment_pattern
+elif(bool(args.regex_pattern)):
+    print("just regex pattern or comment pattern only")
+    print(args.comment_pattern)
+    exit(2)
+    #raise SystemExit
     pass
+
+#except :
+    #default case so do nothing
+used_comment_pattern=default_comment_pattern
 
 
 #scrape all req from swspdf
@@ -104,18 +116,24 @@ for page in [ pdfReader.getPage(i) for i in range(pdfReader.numPages)] :
 #extract all requirments 
 reqs=re.findall(sws_req_pattern,data)
 
-#scan for all headers and source files in this path 
-files=list(
-    filter( lambda file : ('.c' in file or '.h' in file) , os.listdir(args.project_path))
-    )
+#scan for all headers and source files in this path and sub directories
+filelist = []
 
+for root, dirs, files in os.walk(args.project_path):
+	for file in files:
+        #append the file name to the list
+		filelist.append(os.path.join(root,file))
+#filtering only .c .cpp .h .hpp
+files=list(
+    filter( lambda file : ('.c' in file or '.h' in file) , filelist)
+    )
+del filelist
 all_commented_req=list()
 for file in files:
     with open(file,'r') as f:
         code=''
         for line in f.readlines():
             code=code+line
-        #print(code)
         commented_req=re.findall(used_comment_pattern,code)
         all_commented_req.extend(commented_req)
         pass
