@@ -51,9 +51,39 @@ parser.add_argument('-s','--swspdf_path',required=True,help='the path of autosar
 parser.add_argument('-d','--project_path',required=True,help='the path of project directory path',type=str)
 parser.add_argument('-p','--comment_pattern',required=False,help='the path of comment_pattern.txt',type=str)
 parser.add_argument('-r','--regex_pattern',required=False,help='the path of comment_pattern.py which contains only variable named pattern ',type=str)
+parser.add_argument('--starting_tag',required=False,type=str)
+parser.add_argument('--ending_tag',required=False,type=str)
 
 args = parser.parse_args()
 
+
+def pattern_builder(start_tag_text,end_tag_text):
+    start_tag=str()
+    end_tag=str()
+
+    for char in start_tag_text.replace("\n","").split():
+        if(re.match(r'[^\w]',char)):
+            start_tag=start_tag+'\\'+char
+            pass
+        else:
+            start_tag=start_tag+char
+            pass
+        pass
+
+    for char in end_tag_text.replace("\n","").split():
+        if(re.match(r'[^\w]',char)):
+            end_tag=end_tag+'\\'+char
+            pass
+        else:
+            end_tag=end_tag+char
+            pass
+        pass
+
+    txt_pattern="\/\*"+start_tag+"(?P<req_code>[A-Z]+[\d]+)"+end_tag+"[^\*]*[^\/]*\*\/"
+    txt_pattern=re.compile(txt_pattern)
+
+    return txt_pattern
+pass
 
 if(not(os.path.exists(args.swspdf_path))):
     print("%s isn't exist or invalid path"%(args.swspdf_path))
@@ -88,9 +118,13 @@ if( bool(args.regex_pattern) ^ bool(args.comment_pattern) ):
         pass
 
     if(bool(args.comment_pattern)):
-        #with open(args.comment_pattern,'r') as f:
-        print("not supported yet")
-        exit()
+        with open(args.comment_pattern,'r') as f:
+            txt_tags=f.readlines()
+            used_comment_pattern=pattern_builder(txt_tags[0],txt_tags[1])
+        #print(txt_pattern)
+        #print(used_comment_pattern)
+        #print("not supported yet")
+        #exit()
         pass
 elif(bool(args.regex_pattern)):
     print("just regex pattern or comment pattern only")
@@ -98,10 +132,12 @@ elif(bool(args.regex_pattern)):
     exit(2)
     #raise SystemExit
     pass
-
-#except :
-    #default case so do nothing
-used_comment_pattern=default_comment_pattern
+elif(bool(args.starting_tag) and bool(args.ending_tag)):
+    used_comment_pattern=pattern_builder(args.starting_tag,args.ending_tag)
+    pass
+else:
+    #default case so do nothing and use the default comment pattern
+    used_comment_pattern=default_comment_pattern
 
 
 #scrape all req from swspdf
@@ -156,4 +192,4 @@ if len(forgot_req):
         print(req)
     pass
 else:
-    print("all requirments are mentioned ")
+    print("all requirments are mentioned ( or the pattern not match any comment )")
