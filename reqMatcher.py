@@ -78,11 +78,13 @@ if(not(os.path.isdir(args.project_path))):
 
 if( bool(args.regex_pattern) ^ bool(args.comment_pattern) ):
     if(args.regex_pattern):
+        import sys
         match=re.search(regex_comment_module_pattern,args.regex_pattern)
-        module_dir_path=args.regex_pattern.replace(match["module_name"],'') 
-        exec("sys.path.append(%s)"%(module_dir_path))
+        module_dir_path=args.regex_pattern.replace(match["module_name"],'').replace('.py','')[:-1]
+        exec("sys.path.append(r\"%s\")"%(module_dir_path))
         exec('from %s import pattern'%match["module_name"])
-        exec('sws_req_pattern=pattern')
+        exec('used_comment_pattern=pattern')
+        del sys
         pass
 
     if(bool(args.comment_pattern)):

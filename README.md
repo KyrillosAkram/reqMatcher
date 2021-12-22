@@ -29,7 +29,7 @@ by passing the sws_modul.pdf path , project path and comment_pattern.txt if it u
 
   
 
-2- (would be supported in next update) if you know regex and python and want to use a different pattern just create a python file and create single variable named pattern and the pattern contains two named groups first called "req_name" and second called "req_num" and the script will do its job
+2- (would be supported in next update) if you know regex and python and want to use a different pattern just create a python file and create single variable named pattern and the pattern contains first named groups called "req_code" and the script will do its job
 
   
 
