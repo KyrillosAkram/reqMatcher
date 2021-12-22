@@ -1,7 +1,7 @@
 
 # Description
 
-**this script helps you to catch autosar requirments you forgot to implement**
+**this script helps you to catch autosar requirements you forgot to implement**
 
   
 
