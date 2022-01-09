@@ -28,6 +28,8 @@ import argparse
 sws_req_pattern_4_utf8=r"\[(?P<req_code>(?P<req_module>[A-Z]+)(?P<req_num>\d+))\] [\⌈]?(?P<req_discription>[^\⌋]*)[\⌋]? \(([^\)]*)\)"
 
 # the following pattern 4 cmd and powershell
+#sws_req_pattern3=r'(?P<req_code>(?P<req_module>[A-Z]+)(?P<req_num>\d+))\: (?P<req_discription>[ ]?[^\.]*[^\r\n]*)\.[\r]?[\n]'
+sws_req_pattern3=r'(?P<req_code>(?P<req_module>[A-Z]+)(?P<req_num>\d+))\:'
 sws_req_pattern=r"\[(?P<req_code>(?P<req_module>[A-Z]+)(?P<req_num>\d+))\] (?P<req_discription>[^\(]*) \(([^\)]*)\)"
 #sws_req_pattern_lite=r"\[(?P<req_code>(?P<req_module>[A-Z]+)(?P<req_num>\d+))\] (?P<req_discription>[^\(]*) \(([^\)]*)\)"
 
@@ -40,6 +42,7 @@ used_comment_pattern=r''
 # for simple extracting module_name
 regex_comment_module_pattern=r"(?P<module_name>[\w]+)\.py"
 
+version_pattern=r'V(?P<major>[\d]+)\.(?P<minor>[\d]+)\.(?P<patch>[\d]+)'
 
 
 parser = argparse.ArgumentParser(
@@ -56,6 +59,9 @@ parser.add_argument('--ending_tag',required=False,type=str)
 
 args = parser.parse_args()
 
+def get_sws_version(pdfReader):
+    match=re.search(version_pattern,pdfReader.getPage(0).extractText())
+    return match.groupdict()
 
 def pattern_builder(start_tag_text,end_tag_text):
     start_tag=str()
@@ -145,6 +151,9 @@ else:
 pdfFileObj = open(args.swspdf_path, 'rb')
 pdfReader = PyPDF2.PdfFileReader(pdfFileObj)
 
+#detect sws version the major is 2 or 3
+
+
 #extract whole text in pdf file
 data=str()
 for page in [ pdfReader.getPage(i) for i in range(pdfReader.numPages)] :
@@ -152,7 +161,9 @@ for page in [ pdfReader.getPage(i) for i in range(pdfReader.numPages)] :
     pass
 
 #extract all requirments 
-reqs=re.findall(sws_req_pattern,data)
+reqs=re.findall(
+    sws_req_pattern if int(get_sws_version(pdfReader)['major'])<3 else sws_req_pattern3
+    ,data)
 
 #scan for all headers and source files in this path and sub directories
 filelist = []
